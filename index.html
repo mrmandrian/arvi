@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
-    <title>ARVI Premium Engine - PoC</title>
+    <title>ARVI Premium Engine - Live Production</title>
     
     <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.4/dist/mindar-image-aframe.prod.js"></script>
@@ -11,12 +11,12 @@
     <style>
         body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Segoe UI', Arial, sans-serif; }
         
-        /* UI Variance Control Overlay - Sesuai Visi Autopilot ARVI */
+        /* UI Variance Control Panel Overlay - Sesuai Framework Bisnis ARVI */
         #arvi-ui {
             position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); z-index: 9999;
             width: 90%; max-width: 400px; background: rgba(255, 255, 255, 0.95);
             padding: 15px; border-radius: 16px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-            text-align: center; pointer-events: auto;
+            text-align: center; pointer-events: auto; display: none; /* Muncul hanya saat AR ready */
         }
         .ui-title { margin: 0 0 10px 0; font-size: 13px; color: #333; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
         .btn-container { display: flex; gap: 10px; justify-content: center; }
@@ -27,7 +27,7 @@
         }
         .variance-btn.active { background: #2563eb; color: white; }
         
-        /* Layar Loading Sistem Tracker */
+        /* Layar Loading Sistem Tracker Internal ARVI */
         #arvi-loading {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
             background: #111827; color: white; display: flex; flex-direction: column;
@@ -58,7 +58,7 @@
         </div>
     </div>
 
-    <a-scene mindar-image="imageTargetSrc: https://gist.githack.com/merdyandrian/e8a719bf3e970cb70cbd43f333fbbf17/raw/arvi-targets.mind; autoStart: true; uiLoading: no; uiError: no; uiScanning: yes;" 
+    <a-scene mindar-image="imageTargetSrc: ./targets.mind; autoStart: true; uiLoading: no; uiError: no; uiScanning: yes;" 
              embedded color-space="sRGB" renderer="colorManagement: true, sortObjects: true" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
         
         <a-assets>
@@ -79,15 +79,16 @@
     </a-scene>
 
     <script>
-        // Mematikan Layar Loading saat Kamera & SDK Siap Beraksi
+        // Mematikan layar loading setelah engine WebGL & file tracker lokal selesai dimuat
         document.addEventListener("DOMContentLoaded", () => {
             const sceneEl = document.querySelector('a-scene');
             sceneEl.addEventListener("arReady", (event) => {
                 document.getElementById('arvi-loading').style.display = 'none';
+                document.getElementById('arvi-ui').style.display = 'block';
             });
         });
 
-        // Logika Pengontrol Variansi Tampilan (Manipulasi WebGL Mesh secara Real-Time)
+        // Logika Pengontrol Variansi Tampilan (Manipulasi WebGL Mesh secara Real-Time di Canvas)
         function switchVariance(type, buttonElement) {
             const buttons = document.querySelectorAll('.variance-btn');
             buttons.forEach(btn => btn.classList.remove('active'));
@@ -97,30 +98,30 @@
             const mesh = modelEntity.getObject3D('mesh');
 
             if (!mesh) {
-                alert("Model 3D belum selesai dimuat sempurna di memori canvas.");
+                alert("Model Lapangan Basket sedang dimuat ke memori, Boss.");
                 return;
             }
 
             mesh.traverse((node) => {
                 if (node.isMesh) {
-                    // Backup material asli bawaan file .glb jika belum tersimpan
+                    // Backup material asli produk jika belum tersimpan di cache
                     if (!node.userData.originalMaterial) {
                         node.userData.originalMaterial = node.material.clone();
                     }
 
                     if (type === 'wireframe') {
-                        // Mengubah material menjadi garis rangka hijau neon
+                        // Variansi 1: Mengubah objek menjadi rangka garis hijau neon (Wireframe Mode)
                         node.material = new THREE.MeshBasicMaterial({
                             color: 0x00ff00,
                             wireframe: true
                         });
                     } else if (type === 'ghost') {
-                        // Mengubah material menjadi transparan semi tembus pandang
+                        // Variansi 2: Mengubah objek menjadi X-Ray transparan semi tembus pandang
                         node.material = node.userData.originalMaterial.clone();
                         node.material.transparent = true;
                         node.material.opacity = 0.25;
                     } else {
-                        // Mengembalikan ke tampilan material lapangan basket asli
+                        // Variansi Default: Mengembalikan ke material asli lapangan basket
                         node.material = node.userData.originalMaterial;
                     }
                 }
