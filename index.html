@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <title>ARVI Premium Engine - PoC</title>
+    
+    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.4/dist/mindar-image-aframe.prod.js"></script>
+    
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Segoe UI', Arial, sans-serif; }
+        
+        /* UI Variance Control Overlay - Sesuai Visi Autopilot ARVI */
+        #arvi-ui {
+            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); z-index: 9999;
+            width: 90%; max-width: 400px; background: rgba(255, 255, 255, 0.95);
+            padding: 15px; border-radius: 16px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            text-align: center; pointer-events: auto;
+        }
+        .ui-title { margin: 0 0 10px 0; font-size: 13px; color: #333; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
+        .btn-container { display: flex; gap: 10px; justify-content: center; }
+        .variance-btn {
+            flex: 1; padding: 12px 5px; border: 2px solid #2563eb; background: white;
+            color: #2563eb; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 12px;
+            transition: all 0.2s ease;
+        }
+        .variance-btn.active { background: #2563eb; color: white; }
+        
+        /* Layar Loading Sistem Tracker */
+        #arvi-loading {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: #111827; color: white; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; z-index: 99999;
+        }
+        .spinner {
+            width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.1);
+            border-left-color: #2563eb; border-radius: 50%; animation: spin 1s linear infinite;
+            margin-bottom: 15px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+    <div id="arvi-loading">
+        <div class="spinner"></div>
+        <h3 style="margin: 0; letter-spacing: 1px;">ARVI ENGINE</h3>
+        <p style="color: #9ca3af; font-size: 13px; margin: 5px 0 0 0;">Menyiapkan Kamera & Lapangan Basket 3D...</p>
+    </div>
+
+    <div id="arvi-ui">
+        <div class="ui-title">ARVI Variance Control</div>
+        <div class="btn-container">
+            <button class="variance-btn active" onclick="switchVariance('normal', this)">Normal View</button>
+            <button class="variance-btn" onclick="switchVariance('wireframe', this)">Wireframe</button>
+            <button class="variance-btn" onclick="switchVariance('ghost', this)">Ghost View</button>
+        </div>
+    </div>
+
+    <a-scene mindar-image="imageTargetSrc: https://gist.githack.com/merdyandrian/e8a719bf3e970cb70cbd43f333fbbf17/raw/arvi-targets.mind; autoStart: true; uiLoading: no; uiError: no; uiScanning: yes;" 
+             embedded color-space="sRGB" renderer="colorManagement: true, sortObjects: true" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
+        
+        <a-assets>
+            <a-asset-item id="court-model" src="./basketball_court.glb"></a-asset-item>
+        </a-assets>
+
+        <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+        <a-entity mindar-image-target="targetIndex: 0">
+            <a-entity 
+                id="target-model"
+                gltf-model="#court-model" 
+                scale="0.1 0.1 0.1" 
+                position="0 0 0"
+                rotation="90 0 0">
+            </a-entity>
+        </a-entity>
+    </a-scene>
+
+    <script>
+        // Mematikan Layar Loading saat Kamera & SDK Siap Beraksi
+        document.addEventListener("DOMContentLoaded", () => {
+            const sceneEl = document.querySelector('a-scene');
+            sceneEl.addEventListener("arReady", (event) => {
+                document.getElementById('arvi-loading').style.display = 'none';
+            });
+        });
+
+        // Logika Pengontrol Variansi Tampilan (Manipulasi WebGL Mesh secara Real-Time)
+        function switchVariance(type, buttonElement) {
+            const buttons = document.querySelectorAll('.variance-btn');
+            buttons.forEach(btn => btn.classList.remove('active'));
+            buttonElement.classList.add('active');
+
+            const modelEntity = document.getElementById('target-model');
+            const mesh = modelEntity.getObject3D('mesh');
+
+            if (!mesh) {
+                alert("Model 3D belum selesai dimuat sempurna di memori canvas.");
+                return;
+            }
+
+            mesh.traverse((node) => {
+                if (node.isMesh) {
+                    // Backup material asli bawaan file .glb jika belum tersimpan
+                    if (!node.userData.originalMaterial) {
+                        node.userData.originalMaterial = node.material.clone();
+                    }
+
+                    if (type === 'wireframe') {
+                        // Mengubah material menjadi garis rangka hijau neon
+                        node.material = new THREE.MeshBasicMaterial({
+                            color: 0x00ff00,
+                            wireframe: true
+                        });
+                    } else if (type === 'ghost') {
+                        // Mengubah material menjadi transparan semi tembus pandang
+                        node.material = node.userData.originalMaterial.clone();
+                        node.material.transparent = true;
+                        node.material.opacity = 0.25;
+                    } else {
+                        // Mengembalikan ke tampilan material lapangan basket asli
+                        node.material = node.userData.originalMaterial;
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
