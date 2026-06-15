@@ -2,30 +2,30 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
     <title>ARVI MVP Engine - Syaira Core</title>
     
-    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
+    <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
     
     <style>
-        body { margin: 0; padding: 0; background-color: #0f172a; font-family: 'Segoe UI', Arial, sans-serif; overflow: hidden; }
-        #arvi-viewport { width: 100vw; height: 100vh; background-color: #0f172a; }
-
-        /* Panel Kontrol Variansi Tampilan */
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Segoe UI', Arial, sans-serif; }
+        
+        /* UI Panel Kontrol Variansi Tampilan */
         #arvi-ui {
-            position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); z-index: 999;
-            width: 90%; max-width: 420px; background: rgba(255, 255, 255, 0.95);
-            padding: 16px; border-radius: 20px; box-shadow: 0 12px 40px rgba(0,0,0,0.4);
-            text-align: center; backdrop-filter: blur(10px);
+            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); z-index: 9999;
+            width: 90%; max-width: 400px; background: rgba(255, 255, 255, 0.95);
+            padding: 15px; border-radius: 16px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            text-align: center; pointer-events: auto;
         }
-        .ui-title { margin: 0 0 12px 0; font-size: 12px; color: #1e3a8a; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; }
-        .btn-container { display: flex; gap: 8px; justify-content: center; }
+        .ui-title { margin: 0 0 10px 0; font-size: 13px; color: #333; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
+        .btn-container { display: flex; gap: 10px; justify-content: center; }
         .variance-btn {
-            flex: 1; padding: 12px 6px; border: 2px solid #2563eb; background: white;
-            color: #2563eb; border-radius: 10px; cursor: pointer; font-weight: 700; font-size: 11px;
+            flex: 1; padding: 12px 5px; border: 2px solid #2563eb; background: white;
+            color: #2563eb; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 12px;
             transition: all 0.2s ease;
         }
-        .variance-btn.active { background: #2563eb; color: white; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); }
+        .variance-btn.active { background: #2563eb; color: white; }
     </style>
 </head>
 <body>
@@ -33,68 +33,68 @@
     <div id="arvi-ui">
         <div class="ui-title">ARVI Variance Control</div>
         <div class="btn-container">
-            <button class="variance-btn active" id="btn-normal">Normal View</button>
-            <button class="variance-btn" id="btn-wireframe">Wireframe</button>
-            <button class="variance-btn" id="btn-ghost">Ghost View</button>
+            <button class="variance-btn active" onclick="switchVariance('normal', this)">Normal View</button>
+            <button class="variance-btn" onclick="switchVariance('wireframe', this)">Wireframe</button>
+            <button class="variance-btn" onclick="switchVariance('ghost', this)">Ghost View</button>
         </div>
     </div>
 
-    <model-viewer 
-        id="arvi-viewport" 
-        src="./basketball_court.glb" 
-        ar 
-        ar-modes="webxr scene-viewer quick-look" 
-        camera-controls 
-        interaction-prompt="auto"
-        shadow-intensity="1" 
-        ar-placement="floor"
-        alt="ARVI 3D Basketball Court Object">
-    </model-viewer>
+    <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;">
+        
+        <a-assets>
+            <a-asset-item id="court-model" src="./basketball_court.glb" crossOrigin="anonymous"></a-asset-item>
+        </a-assets>
+
+        <a-marker type="pattern" url="https://gist.githack.com/merdyandrian/e8a719bf3e970cb70cbd43f333fbbf17/raw/arvi-qr-tracker.patt" id="marker-tracker">
+            
+            <a-entity 
+                id="target-model"
+                gltf-model="#court-model" 
+                scale="0.1 0.1 0.1" 
+                position="0 0 0"
+                rotation="0 0 0">
+            </a-entity>
+            
+        </a-marker>
+
+        <a-entity camera></a-entity>
+    </a-scene>
 
     <script>
-        const modelViewer = document.querySelector('#arvi-viewport');
-
-        // Pengendali Manipulasi Material PBR via WebGL GPU Memory
-        modelViewer.addEventListener('load', () => {
-            const materials = modelViewer.model.materials;
-            if (!materials || materials.length === 0) return;
-
-            // Cache warna asli produk bawaan file .glb lo
-            const originalColors = materials.map(mat => mat.pbrMetallicRoughness.baseColorFactor);
-
-            // 1. Variansi: Tampilan Normal
-            document.getElementById('btn-normal').addEventListener('click', function() {
-                setActiveButton(this);
-                materials.forEach((mat, idx) => {
-                    mat.pbrMetallicRoughness.setBaseColorFactor(originalColors[idx]);
-                    mat.setAlphaMode("OPAQUE");
-                });
-            });
-
-            // 2. Variansi: Wireframe Simulation (Warna Flat Skematik Hijau Komputer Cyberpunk)
-            document.getElementById('btn-wireframe').addEventListener('click', function() {
-                setActiveButton(this);
-                materials.forEach((mat) => {
-                    mat.pbrMetallicRoughness.setBaseColorFactor([0.0, 1.0, 0.0, 0.8]); 
-                    mat.setAlphaMode("BLEND");
-                });
-            });
-
-            // 3. Variansi: Ghost View (X-Ray Transparansi Tembus Pandang)
-            document.getElementById('btn-ghost').addEventListener('click', function() {
-                setActiveButton(this);
-                materials.forEach((mat, idx) => {
-                    const orig = originalColors[idx];
-                    mat.pbrMetallicRoughness.setBaseColorFactor([orig[0], orig[1], orig[2], 0.25]);
-                    mat.setAlphaMode("BLEND");
-                });
-            });
-        });
-
-        function setActiveButton(element) {
+        // Logika Manipulasi Material GPU untuk Kontrol Variansi Produk
+        function switchVariance(type, buttonElement) {
             const buttons = document.querySelectorAll('.variance-btn');
             buttons.forEach(btn => btn.classList.remove('active'));
-            element.classList.add('active');
+            buttonElement.classList.add('active');
+
+            const modelEntity = document.getElementById('target-model');
+            const mesh = modelEntity.getObject3D('mesh');
+
+            if (!mesh) {
+                alert("Model 3D Lapangan Basket sedang dimuat ke memori canvas, mohon tunggu sesaat, Boss.");
+                return;
+            }
+
+            mesh.traverse((node) => {
+                if (node.isMesh) {
+                    if (!node.userData.originalMaterial) {
+                        node.userData.originalMaterial = node.material.clone();
+                    }
+
+                    if (type === 'wireframe') {
+                        node.material = new THREE.MeshBasicMaterial({
+                            color: 0x00ff00,
+                            wireframe: true
+                        });
+                    } else if (type === 'ghost') {
+                        node.material = node.userData.originalMaterial.clone();
+                        node.material.transparent = true;
+                        node.material.opacity = 0.25;
+                    } else {
+                        node.material = node.userData.originalMaterial;
+                    }
+                }
+            });
         }
     </script>
 </body>
