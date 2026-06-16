@@ -4,10 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Tularasa AR Viewer</title>
-    <!-- A-Frame -->
-    <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
-    <!-- AR.js -->
-    <script src="https://cdn.jsdelivr.net/npm/ar.js@3.4.5/three.js/ar.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
     <style>
       * {
         margin: 0;
@@ -22,9 +20,20 @@
         height: 100%;
         overflow: hidden;
         background: #000;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       }
 
-      #ar-container {
+      #camera-feed {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: block;
+        object-fit: cover;
+      }
+
+      #canvas-container {
         position: absolute;
         top: 0;
         left: 0;
@@ -32,51 +41,10 @@
         height: 100%;
       }
 
-      a-scene {
-        width: 100% !important;
-        height: 100% !important;
-        display: block !important;
-      }
-
-      /* Ensure the canvas takes full screen */
       canvas {
-        width: 100% !important;
-        height: 100% !important;
-        display: block !important;
-      }
-
-      video {
+        display: block;
         width: 100%;
         height: 100%;
-        object-fit: cover;
-        display: block;
-      }
-
-      #ask-button {
-        position: fixed;
-        bottom: 30px;
-        left: 50%;
-        transform: translateX(-50%);
-        padding: 14px 32px;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        border: none;
-        border-radius: 50px;
-        font-size: 16px;
-        font-weight: 600;
-        cursor: pointer;
-        box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
-        z-index: 100;
-        transition: all 0.3s ease;
-        text-decoration: none;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-
-      #ask-button:hover {
-        transform: translateX(-50%) translateY(-2px);
-        box-shadow: 0 12px 32px rgba(102, 126, 234, 0.6);
       }
 
       #gesture-info {
@@ -135,49 +103,38 @@
         line-height: 1.4;
         text-align: center;
       }
+
+      #ask-button {
+        position: fixed;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 14px 32px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 50px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+        z-index: 100;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      #ask-button:hover {
+        transform: translateX(-50%) translateY(-2px);
+        box-shadow: 0 12px 32px rgba(102, 126, 234, 0.6);
+      }
     </style>
   </head>
   <body>
-    <div id="ar-container">
-      <a-scene 
-        embedded
-        arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono;"
-        renderer="antialias: true; alpha: true; precision: medium; preserveDrawingBuffer: true;"
-        vr-mode-ui="enabled: false" 
-        device-orientation-permission-ui="enabled: false"
-        background="color: #000000">
-        
-        <a-assets timeout="30000">
-          <a-asset-item id="courtModel" src="./basketball_court.glb"></a-asset-item>
-        </a-assets>
-
-        <a-camera-static></a-camera-static>
-
-        <!-- QR Code Marker (value 0) -->
-        <a-marker 
-          type="barcode" 
-          value="0"
-          id="qr-marker"
-          emitevents="true"
-          smooth="true"
-          smoothcount="10">
-          <a-entity 
-            id="model-controller"
-            position="0 0 0"
-            rotation="0 0 0"
-            scale="1 1 1">
-            <a-gltf-model 
-              id="court-gltf"
-              scale="1 1 1"
-              position="0 0 0"
-              rotation="0 0 0"
-              src="#courtModel">
-            </a-gltf-model>
-          </a-entity>
-        </a-marker>
-        
-      </a-scene>
-    </div>
+    <video id="camera-feed" playsinline autoplay muted></video>
+    <div id="canvas-container"></div>
 
     <div id="gesture-info">
       📍 QR Marker AR<br>
@@ -203,16 +160,19 @@
     </a>
 
     <script>
-      // Model transformation state
+      // Setup Three.js scene
+      let scene, camera, renderer, model;
       let modelController = null;
-      const qrMarker = document.getElementById('qr-marker');
       const statusEl = document.getElementById('status');
+      const canvasContainer = document.getElementById('canvas-container');
       
+      // Model transformation state
       let currentScale = 1;
       let currentRotationX = 0;
       let currentRotationY = 0;
       let currentPositionX = 0;
       let currentPositionY = 0;
+      let markerDetected = false;
 
       // Touch tracking
       let touchStartDistance = 0;
@@ -221,41 +181,132 @@
       let twoFingerStartX = 0;
       let twoFingerStartY = 0;
       let isMultiTouch = false;
-      let markerDetected = false;
 
-      // Wait for model controller to be available
-      function getModelController() {
-        if (!modelController) {
-          modelController = document.getElementById('model-controller');
-        }
-        return modelController;
+      // Initialize Three.js
+      function initThree() {
+        scene = new THREE.Scene();
+        scene.background = null;
+
+        camera = new THREE.PerspectiveCamera(
+          75,
+          window.innerWidth / window.innerHeight,
+          0.1,
+          1000
+        );
+        camera.position.z = 5;
+
+        renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setClearColor(0x000000, 0);
+        canvasContainer.appendChild(renderer.domElement);
+
+        // Add lighting
+        const light = new THREE.DirectionalLight(0xffffff, 1);
+        light.position.set(5, 5, 5);
+        scene.add(light);
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambientLight);
+
+        // Load glTF model
+        const loader = new THREE.GLTFLoader();
+        loader.load('./basketball_court.glb', (gltf) => {
+          model = gltf.scene;
+          model.position.set(0, 0, 0);
+          model.scale.set(1, 1, 1);
+          modelController = model;
+          scene.add(model);
+          console.log('✅ Model loaded');
+        }, undefined, (error) => {
+          console.error('❌ Model load error:', error);
+          statusEl.textContent = '❌ Model Error';
+          statusEl.className = 'lost';
+        });
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+          camera.aspect = window.innerWidth / window.innerHeight;
+          camera.updateProjectionMatrix();
+          renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
       }
 
-      // Marker detection listeners
-      qrMarker.addEventListener('markerFound', (event) => {
-        markerDetected = true;
-        getModelController();
-        statusEl.textContent = '✅ QR Detected';
-        statusEl.className = 'detected';
-        console.log('✅ QR Marker found');
-      });
+      // Animation loop
+      function animate() {
+        requestAnimationFrame(animate);
+        renderer.render(scene, camera);
+      }
 
-      qrMarker.addEventListener('markerLost', (event) => {
-        markerDetected = false;
-        statusEl.textContent = '❌ QR Lost';
-        statusEl.className = 'lost';
-        resetTransform();
-        console.log('❌ QR Marker lost');
-      });
+      // Initialize camera feed
+      async function initCamera() {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+          });
 
-      // Prevent default scrolling
-      document.addEventListener('touchmove', (e) => {
-        if (markerDetected) {
-          e.preventDefault();
+          const video = document.getElementById('camera-feed');
+          video.srcObject = stream;
+          video.addEventListener('loadedmetadata', () => {
+            console.log('✅ Camera started');
+            statusEl.textContent = '📸 Ready';
+            statusEl.className = '';
+            
+            // Start QR detection
+            detectQRCode(video);
+          });
+
+        } catch (error) {
+          console.error('❌ Camera error:', error);
+          statusEl.textContent = '❌ Camera Denied';
+          statusEl.className = 'lost';
         }
-      }, { passive: false });
+      }
 
-      // Touch start
+      // QR Code detection
+      function detectQRCode(video) {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        function scan() {
+          if (video.readyState === video.HAVE_ENOUGH_DATA) {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const code = jsQR(imageData.data, imageData.width, imageData.height, {
+              inversionAttempts: 2,
+            });
+
+            if (code && code.data === '0') {
+              if (!markerDetected) {
+                markerDetected = true;
+                statusEl.textContent = '✅ QR Detected';
+                statusEl.className = 'detected';
+                console.log('✅ QR Detected');
+              }
+              modelController.visible = true;
+            } else {
+              if (markerDetected) {
+                markerDetected = false;
+                statusEl.textContent = '❌ QR Lost';
+                statusEl.className = 'lost';
+                resetTransform();
+                console.log('❌ QR Lost');
+              }
+              if (modelController) {
+                modelController.visible = false;
+              }
+            }
+          }
+          requestAnimationFrame(scan);
+        }
+        scan();
+      }
+
+      // Touch controls
       document.addEventListener('touchstart', (e) => {
         if (!markerDetected) return;
 
@@ -279,15 +330,10 @@
         e.preventDefault();
       }, { passive: false });
 
-      // Touch move
       document.addEventListener('touchmove', (e) => {
-        if (!markerDetected) return;
-
-        const ctrl = getModelController();
-        if (!ctrl) return;
+        if (!markerDetected || !modelController) return;
 
         if (e.touches.length === 1 && !isMultiTouch) {
-          // Single finger rotation
           const currentX = e.touches[0].clientX;
           const currentY = e.touches[0].clientY;
           
@@ -298,16 +344,13 @@
           currentRotationX += deltaY * 0.01;
 
           updateModelTransform();
-          
           lastTouchX = currentX;
           lastTouchY = currentY;
         } 
         else if (e.touches.length === 2) {
-          // Two finger gestures
           const touch1 = e.touches[0];
           const touch2 = e.touches[1];
           
-          // Pinch zoom
           const dx = touch1.clientX - touch2.clientX;
           const dy = touch1.clientY - touch2.clientY;
           const currentDistance = Math.sqrt(dx * dx + dy * dy);
@@ -319,12 +362,11 @@
             touchStartDistance = currentDistance;
           }
           
-          // Pan
           const centerX = (touch1.clientX + touch2.clientX) / 2;
           const centerY = (touch1.clientY + touch2.clientY) / 2;
           
-          const panDeltaX = (centerX - twoFingerStartX) * 0.003;
-          const panDeltaY = (centerY - twoFingerStartY) * 0.003;
+          const panDeltaX = (centerX - twoFingerStartX) * 0.01;
+          const panDeltaY = (centerY - twoFingerStartY) * 0.01;
           
           currentPositionX += panDeltaX;
           currentPositionY -= panDeltaY;
@@ -338,26 +380,21 @@
         e.preventDefault();
       }, { passive: false });
 
-      // Touch end
       document.addEventListener('touchend', (e) => {
         if (e.touches.length === 0) {
           isMultiTouch = false;
           touchStartDistance = 0;
-        } else if (e.touches.length === 1) {
-          isMultiTouch = false;
-          touchStartDistance = 0;
-          lastTouchX = e.touches[0].clientX;
-          lastTouchY = e.touches[0].clientY;
         }
       }, { passive: false });
 
       function updateModelTransform() {
-        const ctrl = getModelController();
-        if (!ctrl) return;
+        if (!modelController) return;
         
-        ctrl.setAttribute('scale', `${currentScale} ${currentScale} ${currentScale}`);
-        ctrl.setAttribute('rotation', `${currentRotationX} ${currentRotationY} 0`);
-        ctrl.setAttribute('position', `${currentPositionX} ${currentPositionY} 0`);
+        modelController.scale.set(currentScale, currentScale, currentScale);
+        modelController.rotation.x = currentRotationX;
+        modelController.rotation.y = currentRotationY;
+        modelController.position.x = currentPositionX;
+        modelController.position.y = currentPositionY;
       }
 
       function resetTransform() {
@@ -368,23 +405,6 @@
         currentPositionY = 0;
         updateModelTransform();
       }
-
-      // Scene initialization
-      const scene = document.querySelector('a-scene');
-      scene.addEventListener('loaded', () => {
-        console.log('✅ A-Frame scene loaded');
-        statusEl.textContent = '📸 Ready';
-        statusEl.className = '';
-      });
-
-      scene.addEventListener('camera-set-active', () => {
-        console.log('✅ Camera active');
-      });
-
-      // Error handler
-      window.addEventListener('error', (event) => {
-        console.error('Error:', event.message);
-      });
 
       // Double tap to reset
       let lastTap = 0;
@@ -399,13 +419,9 @@
         lastTap = currentTime;
       });
 
-      // Initial status
-      setTimeout(() => {
-        if (!markerDetected) {
-          statusEl.textContent = '📸 Ready';
-          statusEl.className = '';
-        }
-      }, 3000);
+      // Initialize
+      initThree();
+      initCamera();
     </script>
   </body>
 </html>
