@@ -2,18 +2,18 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Tularasa AR Viewer</title>
   
   <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
   
   <style>
-    body { margin: 0; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-    #info { position: fixed; top: 20px; left: 20px; background: rgba(0, 0, 0, 0.7); color: white; padding: 12px 16px; border-radius: 8px; font-size: 13px; z-index: 99; border-left: 3px solid #667eea; }
-    #status { position: fixed; top: 20px; right: 20px; background: rgba(0, 0, 0, 0.8); color: #fbbf24; padding: 12px 16px; border-radius: 8px; font-size: 12px; z-index: 99; font-family: monospace; min-width: 100px; text-align: center; border: 1px solid #fbbf24; }
+    /* KUNCI PINCH ZOOM: touch-action: none mencegah browser melakukan zoom native */
+    body { margin: 0; overflow: hidden; touch-action: none; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    #info { position: fixed; top: 20px; left: 20px; background: rgba(0, 0, 0, 0.7); color: white; padding: 12px 16px; border-radius: 8px; font-size: 13px; z-index: 99; border-left: 3px solid #667eea; pointer-events: none; }
+    #status { position: fixed; top: 20px; right: 20px; background: rgba(0, 0, 0, 0.8); color: #fbbf24; padding: 12px 16px; border-radius: 8px; font-size: 12px; z-index: 99; font-family: monospace; min-width: 100px; text-align: center; border: 1px solid #fbbf24; pointer-events: none; }
     #status.detected { color: #4ade80; border-color: #4ade80; }
-    #status.error { color: #ef4444; border-color: #ef4444; }
     #ask-button { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); padding: 14px 32px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 50px; font-size: 16px; font-weight: 600; text-decoration: none; display: flex; align-items: center; gap: 8px; box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4); z-index: 100; }
   </style>
 </head>
@@ -24,79 +24,85 @@
 
     <a-entity mindar-image-target="targetIndex: 0" id="target">
       
-      <a-entity id="model-controller" rotation="0 0 0" position="0 0 0" scale="1 1 1">
+      <a-entity id="model-controller" position="0 0 0" rotation="0 0 0" scale="2 2 2">
         
-        <a-gltf-model id="court-gltf" src="./basketball_court.glb"></a-gltf-model>
-        
+        <a-entity id="model-aligner" rotation="-90 0 0">
+          <a-gltf-model id="court-gltf" src="./basketball_court.glb"></a-gltf-model>
+        </a-entity>
+
       </a-entity>
+
     </a-entity>
   </a-scene>
 
   <div id="info">
-    👆 Swipe to rotate<br>
+    👆 Swipe to spin<br>
     🤏 Pinch to zoom<br>
     💡 Double tap to reset
   </div>
   <div id="status">📸 Scanning...</div>
-  
   <a href="https://wa.me/6285956252757" id="ask-button"><span>💬</span><span>Ask Me</span></a>
 
   <script>
     const controller = document.getElementById('model-controller');
     const target = document.getElementById('target');
     const statusEl = document.getElementById('status');
-    const modelEl = document.getElementById('court-gltf');
     
-    let scale = 1;
-    let rotX = 0;
-    let rotY = 0;
-
-    // ALARM ERROR: Mengecek apakah file GLB benar-benar berhasil dimuat
-    modelEl.addEventListener('model-error', () => {
-      statusEl.textContent = '❌ GLB Error/404'; 
-      statusEl.className = 'error';
-    });
-    
-    modelEl.addEventListener('model-loaded', () => {
-      console.log("Model 3D sukses dimuat!");
-    });
+    let scale = 2; // Setara dengan skala awal di HTML
+    let rotY = 0;  // Kita hanya izinkan putaran ke kiri/kanan (Spin)
 
     target.addEventListener('targetFound', () => {
-      // Hanya ubah ke detected jika tidak sedang error
-      if(statusEl.className !== 'error') {
-        statusEl.textContent = '✅ Detected'; 
-        statusEl.className = 'detected';
-      }
+      statusEl.textContent = '✅ Detected'; 
+      statusEl.className = 'detected';
     });
 
     target.addEventListener('targetLost', () => {
-      if(statusEl.className !== 'error') {
-        statusEl.textContent = '📸 Scanning...'; 
-        statusEl.className = '';
-      }
+      statusEl.textContent = '📸 Scanning...'; 
+      statusEl.className = '';
     });
 
-    // Touch Gestures (Pinch range diperlebar ekstrem dari 0.01 sampai 1000)
+    // Touch Gestures
     let lastX, dist;
     let lastTap = 0;
 
+    // Tambahkan { passive: false } agar preventDefault() bisa bekerja memblokir zoom browser
     document.addEventListener('touchmove', (e) => {
+      e.preventDefault(); // MENGUNCI ZOOM BROWSER NATIVE
+
       if (e.touches.length === 1) {
+        // 1 JARI: Memutar arah lapangan (Spin)
         rotY += (e.touches[0].clientX - (lastX || e.touches[0].clientX)) * 0.5;
         lastX = e.touches[0].clientX;
-        controller.setAttribute('rotation', `${rotX} ${rotY} 0`);
-      } else if (e.touches.length === 2) {
+        // Rotasi hanya diterapkan pada sumbu Y (kiri-kanan)
+        controller.setAttribute('rotation', `0 ${rotY} 0`);
+      } 
+      else if (e.touches.length === 2) {
+        // 2 JARI: Pinch to Zoom
         const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
         if (dist) {
           scale *= (d / dist);
-          scale = Math.min(Math.max(scale, 0.01), 1000); // Range ekstrem
+          scale = Math.min(Math.max(scale, 0.5), 30); // Batas zoom (0.5x sampai 30x)
         }
         dist = d;
         controller.setAttribute('scale', `${scale} ${scale} ${scale}`);
       }
-    });
+    }, { passive: false });
 
-    document.addEventListener('touchend', () => { lastX = null; dist = null; });
+    document.addEventListener('touchend', (e) => { 
+      lastX = null; 
+      dist = null; 
+      
+      // DOUBLE TAP: Reset posisi
+      const currentTime = new Date().getTime();
+      const tapLength = currentTime - lastTap;
+      if (tapLength < 300 && tapLength > 0 && e.touches.length === 0) {
+        scale = 2;
+        rotY = 0;
+        controller.setAttribute('scale', `${scale} ${scale} ${scale}`);
+        controller.setAttribute('rotation', `0 ${rotY} 0`);
+      }
+      lastTap = currentTime;
+    });
   </script>
 </body>
 </html>
