@@ -12,6 +12,9 @@
       
       #info { position: fixed; top: 20px; left: 20px; background: rgba(0, 0, 0, 0.7); color: white; padding: 12px 16px; border-radius: 8px; font-size: 13px; z-index: 99; border-left: 3px solid #667eea; pointer-events: none; }
       
+      /* HUD Rotasi di sudut kiri bawah */
+      #rot-hud { position: fixed; bottom: 10px; left: 10px; color: rgba(255, 255, 255, 0.7); font-size: 8px; font-family: monospace; z-index: 99; pointer-events: none; text-shadow: 1px 1px 2px rgba(0,0,0,0.8); }
+
       #ask-button { 
         position: fixed; 
         bottom: 30px; 
@@ -29,7 +32,6 @@
         z-index: 100; 
       }
 
-      /* Container fleksibel untuk tombol pilihan model */
       #model-selector {
         position: fixed;
         bottom: 90px;
@@ -55,28 +57,18 @@
         transition: transform 0.1s, background 0.3s;
       }
       
-      .model-btn:active {
-        transform: scale(0.95);
-      }
-      
-      .model-btn.active {
-        background: #65a30d; 
-        box-shadow: inset 0 2px 5px rgba(0,0,0,0.2);
-      }
+      .model-btn:active { transform: scale(0.95); }
+      .model-btn.active { background: #65a30d; box-shadow: inset 0 2px 5px rgba(0,0,0,0.2); }
     </style>
   </head>
   <body>
     
     <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false; trackingMethod: best;" renderer="colorManagement: true" vr-mode-ui="enabled: false">
-      
       <a-marker type="pattern" url="./pattern-mcQBre.patt">
-        
         <a-entity id="model-controller" rotation="0 0 0" position="0 0 0" scale="1 1 1">
           <a-gltf-model id="active-model" src="https://raw.githubusercontent.com/mrmandrian/arvi/main/ujang.glb"></a-gltf-model>
         </a-entity>
-
       </a-marker>
-      
       <a-entity camera></a-entity>
     </a-scene>
 
@@ -85,6 +77,8 @@
       🤏 Pinch to zoom<br>
       💡 Double tap to reset
     </div>
+
+    <div id="rot-hud">0 0 0</div>
 
     <div id="model-selector">
       <button class="model-btn active" onclick="changeModel(1, this)">1</button>
@@ -97,24 +91,41 @@
     <script>
       const controller = document.getElementById('model-controller');
       const activeModel = document.getElementById('active-model');
+      const rotHud = document.getElementById('rot-hud');
       
-      let currentModelId = 1; // Menyimpan ID model yang sedang aktif
+      let currentModelId = 1; 
       let scale = 1; 
       let baseRotX = 0; 
       let currentRotX = 0; 
       let rotY = 0;
       
       let lastX, lastY, dist; 
-      let lastTap = 0; // Untuk deteksi double tap
+      let lastTap = 0; 
 
-      // Konfigurasi Autopilot Model
+      // KONFIGURASI MODEL + IZIN ROTASI
       const models = {
-        1: { url: "https://raw.githubusercontent.com/mrmandrian/arvi/main/ujang.glb", initScale: 1, initRotX: 0 },
-        2: { url: "https://raw.githubusercontent.com/mrmandrian/arvi/main/forest_house.glb", initScale: 4, initRotX: 90 },
-        3: { url: "https://raw.githubusercontent.com/mrmandrian/arvi/main/hiking_boots_lowpoly.glb", initScale: 3, initRotX: 0 }
+        1: { 
+          url: "https://raw.githubusercontent.com/mrmandrian/arvi/main/ujang.glb", 
+          initScale: 1, initRotX: 0, 
+          allowRotX: false, allowRotY: true // Model 1: Hanya Y
+        },
+        2: { 
+          url: "https://raw.githubusercontent.com/mrmandrian/arvi/main/forest_house.glb", 
+          initScale: 4, initRotX: 90, 
+          allowRotX: true, allowRotY: false // Model 2: Hanya X
+        },
+        3: { 
+          url: "https://raw.githubusercontent.com/mrmandrian/arvi/main/hiking_boots_lowpoly.glb", 
+          initScale: 3, initRotX: 0, 
+          allowRotX: true, allowRotY: true  // Model 3: Bebas X & Y
+        }
       };
 
-      // Fungsi Ganti Model
+      function updateHUD() {
+        // Update text HUD dengan pembulatan angka agar rapi
+        rotHud.textContent = `${Math.round(currentRotX)} ${Math.round(rotY)} 0`;
+      }
+
       window.changeModel = function(modelId, btnElement) {
         currentModelId = modelId;
         const config = models[modelId];
@@ -127,30 +138,34 @@
         
         controller.setAttribute('scale', `${scale} ${scale} ${scale}`);
         controller.setAttribute('rotation', `${currentRotX} 0 0`);
+        updateHUD();
 
         document.querySelectorAll('.model-btn').forEach(btn => btn.classList.remove('active'));
         btnElement.classList.add('active');
       };
 
-      // Gestur Pinch & Swipe 360
       document.addEventListener('touchmove', (e) => {
-        // Biarkan tombol UI tetap bisa di-klik
         if(e.target.closest('#model-selector') || e.target.closest('#ask-button')) return;
-        
-        e.preventDefault(); // Kunci zoom browser bawaan
+        e.preventDefault(); 
         
         if (e.touches.length === 1) {
-          // Swipe Kiri-Kanan (Y) dan Atas-Bawah (X)
-          rotY += (e.touches[0].clientX - (lastX || e.touches[0].clientX)) * 0.5;
-          currentRotX += (e.touches[0].clientY - (lastY || e.touches[0].clientY)) * 0.5;
+          const config = models[currentModelId];
+          
+          // Cek izin rotasi dari konfigurasi model yang aktif
+          if (config.allowRotY) {
+            rotY += (e.touches[0].clientX - (lastX || e.touches[0].clientX)) * 0.5;
+          }
+          if (config.allowRotX) {
+            currentRotX += (e.touches[0].clientY - (lastY || e.touches[0].clientY)) * 0.5;
+          }
           
           lastX = e.touches[0].clientX;
           lastY = e.touches[0].clientY; 
           
           controller.setAttribute('rotation', `${currentRotX} ${rotY} 0`);
+          updateHUD();
           
         } else if (e.touches.length === 2) {
-          // Pinch to Zoom
           const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
           if (dist) {
             scale *= (d / dist);
@@ -161,7 +176,6 @@
         }
       }, { passive: false });
 
-      // Deteksi Double Tap Reset & Clear Data
       document.addEventListener('touchend', (e) => { 
         lastX = null; 
         lastY = null; 
@@ -170,7 +184,6 @@
         const currentTime = new Date().getTime();
         const tapLength = currentTime - lastTap;
         
-        // Jika layar diketuk 2x, reset ke ukuran dan rotasi bawaan model tersebut
         if (tapLength < 300 && tapLength > 0 && e.touches.length === 0) {
           scale = models[currentModelId].initScale;
           currentRotX = models[currentModelId].initRotX;
@@ -178,12 +191,14 @@
           
           controller.setAttribute('scale', `${scale} ${scale} ${scale}`);
           controller.setAttribute('rotation', `${currentRotX} 0 0`);
+          updateHUD();
         }
         lastTap = currentTime;
       });
       
-      // Inisialisasi awal saat pertama kali web dimuat
+      // Setup saat pertama kali load
       currentRotX = models[1].initRotX; 
+      updateHUD();
     </script>
   </body>
 </html>
