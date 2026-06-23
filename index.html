@@ -13,8 +13,28 @@
       #top-logo { position: fixed; top: 20px; left: 20px; width: 120px; height: auto; z-index: 99; pointer-events: none; }
       #rot-hud { position: fixed; bottom: 10px; left: 10px; color: rgba(255, 255, 255, 0.7); font-size: 8px; font-family: monospace; z-index: 99; pointer-events: none; text-shadow: 1px 1px 2px rgba(0,0,0,0.8); }
 
-      #loader-container { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 999; display: flex; flex-direction: column; align-items: center; display: flex; }
-      #loader-svg { width: 80px; height: auto; animation: spin 2s linear infinite; }
+      /* PREMIUM FULL SCREEN LOADER SCREEN */
+      #loader-container { 
+        position: fixed; 
+        top: 0; 
+        left: 0; 
+        width: 100vw; 
+        height: 100vh; 
+        background: rgba(0, 0, 0, 0.85); /* Menutup layar dengan elegan saat proses render */
+        z-index: 999; 
+        display: flex; 
+        flex-direction: column; 
+        justify-content: center; 
+        align-items: center; 
+      }
+      
+      /* Ukuran loader diperbesar agar lebih kelihatan */
+      #loader-svg { 
+        width: 150px; 
+        height: auto; 
+        animation: spin 2s linear infinite; 
+      }
+      
       @keyframes spin { 100% { transform: rotate(360deg); } }
 
       #ask-button { position: fixed; bottom: 30px; left: 5%; width: 90%; padding: 14px 0; border-radius: 50px; font-weight: bold; font-size: 16px; text-align: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; box-shadow: 0 4px 15px rgba(0,0,0,0.3); z-index: 100; }
@@ -33,7 +53,7 @@
 
     <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false; trackingMethod: best;" renderer="colorManagement: true" vr-mode-ui="enabled: false">
       <a-marker type="pattern" url="./pattern-mcQBre.patt">
-        <a-entity id="model-controller" rotation="0 0 0" position="0 0 0" scale="0.001 0.001 0.001">
+        <a-entity id="model-controller" rotation="0 0 0" position="0 0 0" scale="0.0001 0.0001 0.0001">
           <a-gltf-model id="active-model" src="https://raw.githubusercontent.com/mrmandrian/arvi/main/ujang.glb"></a-gltf-model>
         </a-entity>
       </a-marker>
@@ -68,7 +88,6 @@
       let lastX, lastY, dist; 
       let lastTap = 0; 
 
-      // KONFIGURASI MODEL (initScale dihapus karena sudah Auto-Pilot!)
       const models = {
         1: { url: "https://raw.githubusercontent.com/mrmandrian/arvi/main/ujang.glb", initRotX: 0, allowRotX: false, allowRotY: true },
         2: { url: "https://raw.githubusercontent.com/mrmandrian/arvi/main/lowpoly_house.glb", initRotX: 90, allowRotX: true, allowRotY: true },
@@ -81,30 +100,33 @@
         rotHud.textContent = `${Math.round(currentRotX)} ${Math.round(rotY)} 0`;
       }
 
-      // MAGIC AUTO-FIT: Bekerja saat file 3D selesai di-download
+      // KALIBRASI & TIMING RENDER BARU
       activeModel.addEventListener('model-loaded', () => {
-        loaderContainer.style.display = 'none';
-
-        // 1. Baca ukuran asli model 3D menggunakan mesin Three.js
-        const mesh = activeModel.getObject3D('mesh');
-        if (mesh) {
-          const box = new THREE.Box3().setFromObject(mesh);
-          const size = new THREE.Vector3();
-          box.getSize(size);
-
-          // 2. Cari sisi yang paling panjang (Width, Height, atau Depth)
-          const maxDim = Math.max(size.x, size.y, size.z);
-
-          // 3. Rumus Autopilot: Target ukuran = 1.2 unit A-Frame (sedikit melampaui kertas anchor biar mantap)
-          const targetSize = 1.2; 
-          const autoScale = targetSize / maxDim;
-
-          // 4. Set skala ke sistem dan simpan untuk fitur Double Tap Reset
-          scale = autoScale;
-          models[currentModelId].baseScale = autoScale;
-
-          controller.setAttribute('scale', `${scale} ${scale} ${scale}`);
-        }
+        // Berikan buffer waktu 250ms agar GPU HP selesai me-render objek asli di layar
+        setTimeout(() => {
+          const obj = activeModel.object3D;
+          if (obj) {
+            obj.updateMatrixWorld(true); // Paksa update struktur koordinat internal objek
+            
+            const box = new THREE.Box3().setFromObject(obj);
+            const size = new THREE.Vector3();
+            box.getSize(size);
+            
+            const maxDim = Math.max(size.x, size.y, size.z);
+            
+            // Target unit 1.0 berarti lebar objek akan sama persis dengan lebar garis luar anchor
+            const targetSize = 1.0; 
+            const autoScale = targetSize / maxDim;
+            
+            scale = autoScale;
+            models[currentModelId].baseScale = autoScale;
+            
+            controller.setAttribute('scale', `${scale} ${scale} ${scale}`);
+          }
+          
+          // Loader baru di-dismiss setelah semua kalkulasi skala dan gambar selesai dilakukan
+          loaderContainer.style.display = 'none';
+        }, 250); 
       });
 
       activeModel.addEventListener('model-error', () => {
@@ -117,9 +139,7 @@
         currentModelId = modelId;
         const config = models[modelId];
 
-        // Sembunyikan model sementara menjadi titik debu saat file berganti
-        controller.setAttribute('scale', `0.001 0.001 0.001`);
-        
+        controller.setAttribute('scale', `0.0001 0.0001 0.0001`);
         activeModel.setAttribute('src', config.url);
         
         baseRotX = config.initRotX;
@@ -151,8 +171,8 @@
           const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
           if (dist) {
             scale *= (d / dist);
-            // Limit zoom disesuaikan karena skala bawaannya sekarang selalu di angka desimal kecil
-            scale = Math.min(Math.max(scale, 0.01), 10); 
+            // Skala manual murni mengalikan basis autoScale bawaan mesin
+            scale = Math.min(Math.max(scale, models[currentModelId].baseScale * 0.2), models[currentModelId].baseScale * 5); 
           }
           dist = d;
           controller.setAttribute('scale', `${scale} ${scale} ${scale}`);
@@ -167,8 +187,7 @@
         const tapLength = currentTime - lastTap;
         
         if (tapLength < 300 && tapLength > 0 && e.touches.length === 0) {
-          // Reset kembali ke skala hitungan Auto-Pilot
-          scale = models[currentModelId].baseScale || 1;
+          scale = models[currentModelId].baseScale || 0.01;
           currentRotX = models[currentModelId].initRotX;
           rotY = 0;
           controller.setAttribute('scale', `${scale} ${scale} ${scale}`);
