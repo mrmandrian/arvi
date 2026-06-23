@@ -9,12 +9,9 @@
     
     <style>
       body { margin: 0; overflow: hidden; touch-action: none; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-      
-      /* UI Elements */
       #top-logo { position: fixed; top: 20px; left: 20px; width: 120px; height: auto; z-index: 99; pointer-events: none; }
       #rot-hud { position: fixed; bottom: 10px; left: 10px; color: rgba(255, 255, 255, 0.7); font-size: 8px; font-family: monospace; z-index: 99; pointer-events: none; text-shadow: 1px 1px 2px rgba(0,0,0,0.8); }
 
-      /* Premium Full Screen Loader Overlay */
       #loader-container { 
         position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
         background: rgba(0, 0, 0, 0.85); z-index: 999; 
@@ -23,33 +20,20 @@
       #loader-svg { width: 150px; height: auto; animation: spin 2s linear infinite; }
       @keyframes spin { 100% { transform: rotate(360deg); } }
 
-      /* Interaction Buttons */
       #ask-button { 
         position: fixed; bottom: 30px; left: 5%; width: 90%; padding: 14px 0; 
         border-radius: 50px; font-weight: bold; font-size: 16px; text-align: center; 
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; 
         text-decoration: none; box-shadow: 0 4px 15px rgba(0,0,0,0.3); z-index: 100; 
       }
-      
-      #model-selector { 
-        position: fixed; bottom: 90px; left: 5%; width: 90%; 
-        display: flex; gap: 5px; z-index: 100; justify-content: space-between; 
-      }
-
-      .model-btn { 
-        flex: 1; padding: 12px 0; background: #a3e635; color: white; border: none; 
-        border-radius: 30px; font-size: 16px; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.2); 
-        cursor: pointer; transition: transform 0.1s, background 0.3s; 
-      }
+      #model-selector { position: fixed; bottom: 90px; left: 5%; width: 90%; display: flex; gap: 5px; z-index: 100; justify-content: space-between; }
+      .model-btn { flex: 1; padding: 12px 0; background: #a3e635; color: white; border: none; border-radius: 30px; font-size: 16px; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.2); cursor: pointer; transition: transform 0.1s, background 0.3s; }
       .model-btn:active { transform: scale(0.95); }
       .model-btn.active { background: #65a30d; box-shadow: inset 0 2px 5px rgba(0,0,0,0.2); }
     </style>
   </head>
   <body>
-    
-    <div id="loader-container">
-      <img id="loader-svg" src="https://raw.githubusercontent.com/mrmandrian/arvi/main/Abstraction.svg" alt="Loading...">
-    </div>
+    <div id="loader-container"><img id="loader-svg" src="https://raw.githubusercontent.com/mrmandrian/arvi/main/Abstraction.svg" alt="Loading..."></div>
 
     <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false; trackingMethod: best;" renderer="colorManagement: true" vr-mode-ui="enabled: false">
       <a-marker type="pattern" url="./pattern-mcQBre.patt">
@@ -60,7 +44,7 @@
       <a-entity camera></a-entity>
     </a-scene>
 
-    <img id="top-logo" src="https://raw.githubusercontent.com/mrmandrian/arvi/main/tularasa_fin_Finale material.svg" alt="Tularasa Logo">
+    <img id="top-logo" src="https://raw.githubusercontent.com/mrmandrian/arvi/main/tularasa_fin_Finale%20material.svg" alt="Tularasa Logo">
     <div id="rot-hud">0 0 0</div>
 
     <div id="model-selector">
@@ -84,114 +68,75 @@
       let baseRotX = 0; 
       let currentRotX = 0; 
       let rotY = 0;
-      
-      let lastX, lastY, dist; 
-      let lastTap = 0; 
+      let lastX, lastY, dist, lastTap = 0; 
 
-      // KONFIGURASI MODEL FINAL
       const models = {
         1: { url: "https://raw.githubusercontent.com/mrmandrian/arvi/main/ujang.glb", initRotX: 0, allowRotX: false, allowRotY: true },
-        2: { url: "https://raw.githubusercontent.com/mrmandrian/arvi/main/lowpoly_house.glb", initRotX: 0, allowRotX: true, allowRotY: true },
+        2: { url: "https://raw.githubusercontent.com/mrmandrian/arvi/main/lowpoly_house.glb", initRotX: 90, allowRotX: true, allowRotY: true },
         3: { url: "https://raw.githubusercontent.com/mrmandrian/arvi/main/hiking_boots_lowpoly.glb", initRotX: 0, allowRotX: true, allowRotY: true },
         4: { url: "https://raw.githubusercontent.com/mrmandrian/arvi/main/motocross_helmet_final.glb", initRotX: 0, allowRotX: true, allowRotY: true },
         5: { url: "https://raw.githubusercontent.com/mrmandrian/arvi/main/low-poly_truck_car_drifter.glb", initRotX: 0, allowRotX: false, allowRotY: true }
       };
 
-      function updateHUD() {
-        rotHud.textContent = `${Math.round(currentRotX)} ${Math.round(rotY)} 0`;
-      }
+      function updateHUD() { rotHud.textContent = `${Math.round(currentRotX)} ${Math.round(rotY)} 0`; }
 
-      // 1. AUTO-FIT VIEWPORT LOGIC
       activeModel.addEventListener('model-loaded', () => {
         setTimeout(() => {
           const obj = activeModel.object3D;
           if (obj) {
-            obj.updateMatrixWorld(true); 
-            
+            obj.updateMatrixWorld(true);
             const box = new THREE.Box3().setFromObject(obj);
-            const size = new THREE.Vector3();
-            box.getSize(size);
-            
+            const size = new THREE.Vector3(); box.getSize(size);
             const maxDim = Math.max(size.x, size.y, size.z);
-            
-            // Rasio Viewport: 3.5 kali dari ukuran anchor agar megah di layar
-            const viewportTarget = 3.5; 
-            const autoScale = viewportTarget / maxDim;
-            
+            // Viewport Auto-Scale (80% layar)
+            let autoScale = 0.8 / maxDim;
+            autoScale = Math.min(Math.max(autoScale, 0.01), 10);
             scale = autoScale;
             models[currentModelId].baseScale = autoScale;
-            
             controller.setAttribute('scale', `${scale} ${scale} ${scale}`);
           }
-          
           loaderContainer.style.display = 'none';
-        }, 250); // Buffer untuk GPU Rendering
+        }, 250);
       });
 
-      activeModel.addEventListener('model-error', () => {
-        loaderContainer.style.display = 'none';
-        console.error("Model gagal dimuat!");
-      });
-
-      // 2. SWITCH MODEL LOGIC
       window.changeModel = function(modelId, btnElement) {
-        loaderContainer.style.display = 'flex'; // Nyalakan loader overlay
+        loaderContainer.style.display = 'flex';
         currentModelId = modelId;
-        const config = models[modelId];
-
-        // Reset ukuran ke debu saat mengganti file
-        controller.setAttribute('scale', `0.0001 0.0001 0.0001`);
-        activeModel.setAttribute('src', config.url);
-        
-        baseRotX = config.initRotX;
-        currentRotX = baseRotX; 
+        activeModel.setAttribute('src', models[modelId].url);
+        currentRotX = models[modelId].initRotX; 
         rotY = 0;
-        
         controller.setAttribute('rotation', `${currentRotX} 0 0`);
         updateHUD();
-
         document.querySelectorAll('.model-btn').forEach(btn => btn.classList.remove('active'));
         btnElement.classList.add('active');
       };
 
-      // 3. GESTURE LOGIC (PINCH & SWIPE)
       document.addEventListener('touchmove', (e) => {
         if(e.target.closest('#model-selector') || e.target.closest('#ask-button')) return;
         e.preventDefault(); 
-        
         if (e.touches.length === 1) {
-          const config = models[currentModelId];
-          if (config.allowRotY) rotY += (e.touches[0].clientX - (lastX || e.touches[0].clientX)) * 0.5;
-          if (config.allowRotX) currentRotX += (e.touches[0].clientY - (lastY || e.touches[0].clientY)) * 0.5;
-          
-          lastX = e.touches[0].clientX;
-          lastY = e.touches[0].clientY; 
+          if (models[currentModelId].allowRotY) rotY += (e.touches[0].clientX - (lastX || e.touches[0].clientX)) * 0.5;
+          if (models[currentModelId].allowRotX) currentRotX += (e.touches[0].clientY - (lastY || e.touches[0].clientY)) * 0.5;
+          lastX = e.touches[0].clientX; lastY = e.touches[0].clientY; 
           controller.setAttribute('rotation', `${currentRotX} ${rotY} 0`);
           updateHUD();
         } else if (e.touches.length === 2) {
           const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
           if (dist) {
             scale *= (d / dist);
-            // Limit Pinch: Bisa dikecilkan 10% atau dibesarkan 3x lipat dari skala base layar
-            const base = models[currentModelId].baseScale || 1;
-            scale = Math.min(Math.max(scale, base * 0.1), base * 3); 
+            const base = models[currentModelId].baseScale || 0.1;
+            scale = Math.min(Math.max(scale, base * 0.1), base * 5); 
           }
-          dist = d;
-          controller.setAttribute('scale', `${scale} ${scale} ${scale}`);
+          dist = d; controller.setAttribute('scale', `${scale} ${scale} ${scale}`);
         }
       }, { passive: false });
 
-      // 4. DOUBLE TAP RESET LOGIC
       document.addEventListener('touchend', (e) => { 
         lastX = null; lastY = null; dist = null; 
-        
         const currentTime = new Date().getTime();
-        const tapLength = currentTime - lastTap;
-        
-        if (tapLength < 300 && tapLength > 0 && e.touches.length === 0) {
-          scale = models[currentModelId].baseScale || 0.001;
-          currentRotX = models[currentModelId].initRotX;
-          rotY = 0;
+        if (currentTime - lastTap < 300 && e.touches.length === 0) {
+          scale = models[currentModelId].baseScale || 0.1;
+          currentRotX = models[currentModelId].initRotX; rotY = 0;
           controller.setAttribute('scale', `${scale} ${scale} ${scale}`);
           controller.setAttribute('rotation', `${currentRotX} 0 0`);
           updateHUD();
@@ -199,8 +144,6 @@
         lastTap = currentTime;
       });
       
-      // Inisialisasi awal UI
-      currentRotX = models[1].initRotX; 
       updateHUD();
     </script>
   </body>
