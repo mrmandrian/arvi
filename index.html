@@ -19,7 +19,6 @@
         padding: 4px 6px; border-radius: 4px;
       }
 
-      /* Premium Full Screen Loader Overlay */
       #loader-container { 
         position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
         background: rgba(0, 0, 0, 0.85); z-index: 999; 
@@ -28,7 +27,6 @@
       #loader-svg { width: 150px; height: auto; animation: spin 2s linear infinite; }
       @keyframes spin { 100% { transform: rotate(360deg); } }
 
-      /* Interaction Buttons */
       #ask-button { 
         position: fixed; bottom: 30px; left: 5%; width: 90%; padding: 14px 0; 
         border-radius: 50px; font-weight: bold; font-size: 16px; text-align: center; 
@@ -40,7 +38,7 @@
       .model-btn:active { transform: scale(0.95); }
       .model-btn.active { background: #65a30d; box-shadow: inset 0 2px 5px rgba(0,0,0,0.2); }
 
-      /* BOLA CONTROLLER (JoyStick Virtual) - Kanan Atas, Ukuran 1/3 */
+      /* BOLA CONTROLLER */
       #virtual-controller {
         position: fixed; top: 20px; right: 20px; width: 30px; height: 30px;
         z-index: 99; display: flex; justify-content: center; align-items: center; touch-action: none;
@@ -61,15 +59,16 @@
     <div id="loader-container"><img id="loader-svg" src="https://raw.githubusercontent.com/mrmandrian/arvi/main/Abstraction.svg" alt="Loading..."></div>
 
     <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false; trackingMethod: best;" renderer="colorManagement: true" vr-mode-ui="enabled: false">
-      <a-marker type="pattern" url="./pattern-mcQBre.patt">
+      <a-marker type="pattern" url="./pattern-mcQBre.patt" smooth="true" smoothCount="10" smoothTolerance="0.01" smoothThreshold="5">
         <a-entity id="model-controller" rotation="0 0 0" position="0 0 0" scale="1 1 1">
           <a-gltf-model id="active-model" src="https://raw.githubusercontent.com/mrmandrian/arvi/main/ujang.glb"></a-gltf-model>
         </a-entity>
       </a-marker>
-      <a-entity camera></a-entity>
+      <a-entity camera near="0.001" far="10000"></a-entity>
     </a-scene>
 
     <img id="top-logo" src="https://raw.githubusercontent.com/mrmandrian/arvi/main/tularasa_fin_Finale%20material.svg" alt="Tularasa Logo">
+    
     <div id="rot-hud">Rot: 0 0 0 | Zoom: 1.0</div>
 
     <div id="virtual-controller">
@@ -99,12 +98,12 @@
       let currentRotX = 0; 
       let rotY = 0;
       let lastX, lastY, dist, lastTap = 0; 
-      let hasMoved = false; // Penanda untuk membedakan tap vs drag/pinch
+      let hasMoved = false;
 
-      // KONFIGURASI MODEL (Fixed Sizing)
+      // KONFIGURASI MODEL
       const models = {
         1: { url: "https://raw.githubusercontent.com/mrmandrian/arvi/main/ujang.glb", initScale: 1, initRotX: 0, allowRotX: false, allowRotY: true },
-        2: { url: "https://raw.githubusercontent.com/mrmandrian/arvi/main/lowpoly_house.glb", initScale: 0.5, initRotX: 0, allowRotX: true, allowRotY: true },
+        2: { url: "https://raw.githubusercontent.com/mrmandrian/arvi/main/lowpoly_house.glb", initScale: 0.5, initRotX: 0, allowRotX: false, allowRotY: true },
         3: { url: "https://raw.githubusercontent.com/mrmandrian/arvi/main/hiking_boots_lowpoly.glb", initScale: 1, initRotX: 0, allowRotX: true, allowRotY: true },
         4: { url: "https://raw.githubusercontent.com/mrmandrian/arvi/main/motocross_helmet_final.glb", initScale: 0.5, initRotX: 0, allowRotX: true, allowRotY: true },
         5: { url: "https://raw.githubusercontent.com/mrmandrian/arvi/main/low-poly_truck_car_drifter.glb", initScale: 0.1, initRotX: 0, allowRotX: false, allowRotY: true }
@@ -136,18 +135,16 @@
         btnElement.classList.add('active');
       };
 
-      // ----------------------------------------------------
-      // GESTURE TOUCH SCREEN (MOBILE) LOGIC
-      // ----------------------------------------------------
+      // GESTURE TOUCH SCREEN (MOBILE)
       document.addEventListener('touchstart', (e) => {
-        hasMoved = false; // Reset penanda gerak saat sentuhan baru dimulai
+        hasMoved = false; 
       }, { passive: true });
 
       document.addEventListener('touchmove', (e) => {
         if(e.target.closest('#virtual-controller') || e.target.closest('#model-selector') || e.target.closest('#ask-button')) return;
         
         e.preventDefault(); 
-        hasMoved = true; // Tandai bahwa user sedang drag/pinch (bukan tap)
+        hasMoved = true; 
         
         if (e.touches.length === 1) {
           const config = models[currentModelId];
@@ -173,7 +170,6 @@
         lastX = null; lastY = null; dist = null; 
         const currentTime = new Date().getTime();
         
-        // Double tap reset hanya berlaku jika jarak waktu < 300ms DAN tidak ada pergeseran jari
         if (!hasMoved && currentTime - lastTap < 300 && e.touches.length === 0) {
           scale = models[currentModelId].initScale;
           currentRotX = models[currentModelId].initRotX; rotY = 0;
@@ -184,9 +180,7 @@
         lastTap = currentTime;
       });
       
-      // ----------------------------------------------------
-      // VIRTUAL CONTROLLER LOGIC (Kanan Atas, Ukuran Kecil)
-      // ----------------------------------------------------
+      // VIRTUAL CONTROLLER
       const controllerKnob = document.getElementById('joystick-knob');
       let isDraggingKnob = false;
       let knobStartX, knobStartY;
@@ -223,9 +217,14 @@
 
         controllerKnob.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
 
-        // Update rotasi AR scene
-        currentRotX -= (offsetY / knobMaxOffset) * 3; 
-        rotY += (offsetX / knobMaxOffset) * 3; 
+        // UPDATE 3: Joystick mematuhi rules allowRotX dan allowRotY
+        const config = models[currentModelId];
+        if (config.allowRotX) {
+          currentRotX -= (offsetY / knobMaxOffset) * 3; 
+        }
+        if (config.allowRotY) {
+          rotY += (offsetX / knobMaxOffset) * 3; 
+        }
 
         controller.setAttribute('rotation', `${currentRotX} ${rotY} 0`);
         updateHUD();
