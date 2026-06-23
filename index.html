@@ -46,13 +46,13 @@
       .model-btn:active { transform: scale(0.95); }
       .model-btn.active { background: #65a30d; box-shadow: inset 0 2px 5px rgba(0,0,0,0.2); }
 
-      /* BOLA CONTROLLER (JoyStick Virtual) CSS */
+      /* BOLA CONTROLLER (JoyStick Virtual) CSS - Diperkecil & Pindah Kanan Atas */
       #virtual-controller {
         position: fixed;
-        bottom: 20px;
+        top: 20px; /* Pindah ke atas */
         right: 20px;
-        width: 80px;
-        height: 80px;
+        width: 30px; /* Diperkecil 1/3 */
+        height: 30px; /* Diperkecil 1/3 */
         z-index: 99;
         display: flex;
         justify-content: center;
@@ -70,15 +70,15 @@
       }
 
       #joystick-knob {
-        width: 40px;
-        height: 40px;
+        width: 15px; /* Diperkecil 1/3 */
+        height: 15px; /* Diperkecil 1/3 */
         background: linear-gradient(135deg, #a3e635 0%, #65a30d 100%);
-        border: 2px solid white;
+        border: 1px solid white;
         border-radius: 50%;
         position: absolute;
         cursor: grab;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-        transition: transform 0.1s ease-out; /* Animasi snap-back */
+        box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        transition: transform 0.1s ease-out;
       }
       #joystick-knob:active {
         cursor: grabbing;
@@ -129,7 +129,6 @@
       let rotY = 0;
       let lastX, lastY, dist, lastTap = 0; 
 
-      // KONFIGURASI MODEL KEMBALI KE FIXED SIZING
       const models = {
         1: { url: "https://raw.githubusercontent.com/mrmandrian/arvi/main/ujang.glb", initScale: 1, initRotX: 0, allowRotX: false, allowRotY: true },
         2: { url: "https://raw.githubusercontent.com/mrmandrian/arvi/main/lowpoly_house.glb", initScale: 0.5, initRotX: 0, allowRotX: true, allowRotY: true },
@@ -138,7 +137,6 @@
         5: { url: "https://raw.githubusercontent.com/mrmandrian/arvi/main/low-poly_truck_car_drifter.glb", initScale: 0.5, initRotX: 0, allowRotX: false, allowRotY: true }
       };
 
-      // FUNGSI HUD DIUPDATE UNTUK MENAMPILKAN ZOOM
       function updateHUD() {
         rotHud.textContent = `Rot: ${Math.round(currentRotX)} ${Math.round(rotY)} 0 | Zoom: ${scale.toFixed(1)}`;
       }
@@ -172,11 +170,7 @@
         btnElement.classList.add('active');
       };
 
-      // ----------------------------------------------------
-      // GESTURE TOUCH SCREEN (MOBILE) LOGIC
-      // ----------------------------------------------------
       document.addEventListener('touchmove', (e) => {
-        // Jangan block touch if it's on the new controller
         if(e.target.closest('#virtual-controller') || e.target.closest('#model-selector') || e.target.closest('#ask-button')) return;
         
         e.preventDefault(); 
@@ -197,7 +191,7 @@
             scale = Math.min(Math.max(scale, base * 0.1), base * 5); 
           }
           dist = d; controller.setAttribute('scale', `${scale} ${scale} ${scale}`);
-          updateHUD(); // Update HUD on zoom
+          updateHUD(); 
         }
       }, { passive: false });
 
@@ -216,20 +210,18 @@
       });
       
       // ----------------------------------------------------
-      // VIRTUAL CONTROLLER LOGIC (DESKTOP/TOUCH)
+      // VIRTUAL CONTROLLER LOGIC (Dioptimasi untuk ukuran 1/3)
       // ----------------------------------------------------
       const controllerKnob = document.getElementById('joystick-knob');
       let isDraggingKnob = false;
       let knobStartX, knobStartY;
-      const knobMaxOffset = 30; // Batas drag knob dari pusat (80px base, 40px knob -> 20px free play)
+      const knobMaxOffset = 10; // Disesuaikan karena base mengecil dari 80px jadi 30px
       
       function initVirtualController() {
-        // Desktop (Mouse)
         controllerKnob.addEventListener('mousedown', onKnobStart);
         window.addEventListener('mousemove', onKnobMove);
         window.addEventListener('mouseup', onKnobEnd);
 
-        // Touch (Mobile)
         controllerKnob.addEventListener('touchstart', (e) => { e.preventDefault(); onKnobStart(e.touches[0]); });
         window.addEventListener('touchmove', (e) => { if(isDraggingKnob) e.preventDefault(); onKnobMove(e.touches[0]); }, { passive: false });
         window.addEventListener('touchend', onKnobEnd);
@@ -239,7 +231,7 @@
         isDraggingKnob = true;
         knobStartX = e.clientX;
         knobStartY = e.clientY;
-        controllerKnob.style.transition = 'none'; // Matikan animasi snap-back saat drag
+        controllerKnob.style.transition = 'none'; 
       }
 
       function onKnobMove(e) {
@@ -248,7 +240,6 @@
         let offsetX = e.clientX - knobStartX;
         let offsetY = e.clientY - knobStartY;
 
-        // Clamp positions to the base ring
         let distance = Math.sqrt(offsetX * offsetX + offsetY * offsetY);
         if (distance > knobMaxOffset) {
           let angle = Math.atan2(offsetY, offsetX);
@@ -258,10 +249,9 @@
 
         controllerKnob.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
 
-        // Update Rotasi Model berdasarkan offset controller
-        // Y output -> currentRotX, X output -> rotY
-        currentRotX -= (offsetY / knobMaxOffset) * 2; // Speed multiplier
-        rotY += (offsetX / knobMaxOffset) * 2; // Speed multiplier
+        // Multiplier dinaikkan agar dengan tarikan pendek, putarannya tetap responsif
+        currentRotX -= (offsetY / knobMaxOffset) * 3; 
+        rotY += (offsetX / knobMaxOffset) * 3; 
 
         controller.setAttribute('rotation', `${currentRotX} ${rotY} 0`);
         updateHUD();
@@ -269,13 +259,12 @@
 
       function onKnobEnd() {
         isDraggingKnob = false;
-        controllerKnob.style.transition = 'transform 0.1s ease-out'; // Hidupkan animasi snap-back
-        controllerKnob.style.transform = 'translate(0, 0)'; // Kembalikan knob ke pusat
+        controllerKnob.style.transition = 'transform 0.1s ease-out'; 
+        controllerKnob.style.transform = 'translate(0, 0)'; 
       }
 
       initVirtualController();
 
-      // Inisialisasi awal saat web dimuat
       scale = models[1].initScale;
       currentRotX = models[1].initRotX;
       controller.setAttribute('scale', `${scale} ${scale} ${scale}`);
