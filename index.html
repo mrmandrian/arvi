@@ -11,40 +11,16 @@
       body { margin: 0; overflow: hidden; touch-action: none; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
       
       #top-logo { position: fixed; top: 20px; left: 20px; width: 120px; height: auto; z-index: 99; pointer-events: none; }
-      
       #rot-hud { position: fixed; bottom: 10px; left: 10px; color: rgba(255, 255, 255, 0.7); font-size: 8px; font-family: monospace; z-index: 99; pointer-events: none; text-shadow: 1px 1px 2px rgba(0,0,0,0.8); }
 
-      #loader-container {
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        z-index: 999;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        display: flex; 
-      }
-      
-      #loader-svg {
-        width: 80px; 
-        height: auto;
-        animation: spin 2s linear infinite; 
-      }
-      
+      #loader-container { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 999; display: flex; flex-direction: column; align-items: center; display: flex; }
+      #loader-svg { width: 80px; height: auto; animation: spin 2s linear infinite; }
       @keyframes spin { 100% { transform: rotate(360deg); } }
 
-      #ask-button { 
-        position: fixed; bottom: 30px; left: 5%; width: 90%; padding: 14px 0; border-radius: 50px; font-weight: bold; font-size: 16px; text-align: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; box-shadow: 0 4px 15px rgba(0,0,0,0.3); z-index: 100; 
-      }
+      #ask-button { position: fixed; bottom: 30px; left: 5%; width: 90%; padding: 14px 0; border-radius: 50px; font-weight: bold; font-size: 16px; text-align: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; box-shadow: 0 4px 15px rgba(0,0,0,0.3); z-index: 100; }
+      #model-selector { position: fixed; bottom: 90px; left: 5%; width: 90%; display: flex; gap: 5px; z-index: 100; justify-content: space-between; }
 
-      #model-selector {
-        position: fixed; bottom: 90px; left: 5%; width: 90%; display: flex; gap: 5px; z-index: 100; justify-content: space-between;
-      }
-
-      .model-btn {
-        flex: 1; padding: 12px 0; background: #a3e635; color: white; border: none; border-radius: 30px; font-size: 16px; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.2); cursor: pointer; transition: transform 0.1s, background 0.3s;
-      }
+      .model-btn { flex: 1; padding: 12px 0; background: #a3e635; color: white; border: none; border-radius: 30px; font-size: 16px; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.2); cursor: pointer; transition: transform 0.1s, background 0.3s; }
       .model-btn:active { transform: scale(0.95); }
       .model-btn.active { background: #65a30d; box-shadow: inset 0 2px 5px rgba(0,0,0,0.2); }
     </style>
@@ -57,7 +33,7 @@
 
     <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false; trackingMethod: best;" renderer="colorManagement: true" vr-mode-ui="enabled: false">
       <a-marker type="pattern" url="./pattern-mcQBre.patt">
-        <a-entity id="model-controller" rotation="0 0 0" position="0 0 0" scale="1 1 1">
+        <a-entity id="model-controller" rotation="0 0 0" position="0 0 0" scale="0.001 0.001 0.001">
           <a-gltf-model id="active-model" src="https://raw.githubusercontent.com/mrmandrian/arvi/main/ujang.glb"></a-gltf-model>
         </a-entity>
       </a-marker>
@@ -65,7 +41,6 @@
     </a-scene>
 
     <img id="top-logo" src="https://raw.githubusercontent.com/mrmandrian/arvi/main/tularasa_fin_Finale%20material.svg" alt="Tularasa Logo">
-
     <div id="rot-hud">0 0 0</div>
 
     <div id="model-selector">
@@ -93,40 +68,45 @@
       let lastX, lastY, dist; 
       let lastTap = 0; 
 
-      // KONFIGURASI MODEL TERUPDATE
+      // KONFIGURASI MODEL (initScale dihapus karena sudah Auto-Pilot!)
       const models = {
-        1: { 
-          url: "https://raw.githubusercontent.com/mrmandrian/arvi/main/ujang.glb", 
-          initScale: 1, initRotX: 0, allowRotX: false, allowRotY: true 
-        },
-        // Model 2: Lowpoly House
-        2: { 
-          url: "https://raw.githubusercontent.com/mrmandrian/arvi/main/lowpoly_house.glb", 
-          initScale: 2, initRotX: 0, allowRotX: true, allowRotY: true 
-        },
-        // Model 3: Motocross Helmet
-        3: { 
-          url: "https://raw.githubusercontent.com/mrmandrian/arvi/main/motocross_helmet_final.glb", 
-          initScale: 2, initRotX: 0, allowRotX: true, allowRotY: true 
-        },
-        4: { 
-          url: "https://raw.githubusercontent.com/mrmandrian/arvi/main/scifi_helmet.glb", 
-          initScale: 1, initRotX: 0, allowRotX: true, allowRotY: true 
-        },
-        // Model 5: Low-poly Truck Car Drifter
-        5: { 
-          url: "https://raw.githubusercontent.com/mrmandrian/arvi/main/low-poly_truck_car_drifter.glb", 
-          initScale: 2, initRotX: 0, allowRotX: false, allowRotY: true 
-        }
+        1: { url: "https://raw.githubusercontent.com/mrmandrian/arvi/main/ujang.glb", initRotX: 0, allowRotX: false, allowRotY: true },
+        2: { url: "https://raw.githubusercontent.com/mrmandrian/arvi/main/lowpoly_house.glb", initRotX: 90, allowRotX: true, allowRotY: true },
+        3: { url: "https://raw.githubusercontent.com/mrmandrian/arvi/main/hiking_boots_lowpoly.glb", initRotX: 0, allowRotX: true, allowRotY: true },
+        4: { url: "https://raw.githubusercontent.com/mrmandrian/arvi/main/motocross_helmet_final.glb", initRotX: 0, allowRotX: true, allowRotY: true },
+        5: { url: "https://raw.githubusercontent.com/mrmandrian/arvi/main/low-poly_truck_car_drifter.glb", initRotX: 0, allowRotX: false, allowRotY: true }
       };
 
       function updateHUD() {
         rotHud.textContent = `${Math.round(currentRotX)} ${Math.round(rotY)} 0`;
       }
 
+      // MAGIC AUTO-FIT: Bekerja saat file 3D selesai di-download
       activeModel.addEventListener('model-loaded', () => {
         loaderContainer.style.display = 'none';
+
+        // 1. Baca ukuran asli model 3D menggunakan mesin Three.js
+        const mesh = activeModel.getObject3D('mesh');
+        if (mesh) {
+          const box = new THREE.Box3().setFromObject(mesh);
+          const size = new THREE.Vector3();
+          box.getSize(size);
+
+          // 2. Cari sisi yang paling panjang (Width, Height, atau Depth)
+          const maxDim = Math.max(size.x, size.y, size.z);
+
+          // 3. Rumus Autopilot: Target ukuran = 1.2 unit A-Frame (sedikit melampaui kertas anchor biar mantap)
+          const targetSize = 1.2; 
+          const autoScale = targetSize / maxDim;
+
+          // 4. Set skala ke sistem dan simpan untuk fitur Double Tap Reset
+          scale = autoScale;
+          models[currentModelId].baseScale = autoScale;
+
+          controller.setAttribute('scale', `${scale} ${scale} ${scale}`);
+        }
       });
+
       activeModel.addEventListener('model-error', () => {
         loaderContainer.style.display = 'none';
         console.error("Model gagal dimuat!");
@@ -134,17 +114,18 @@
 
       window.changeModel = function(modelId, btnElement) {
         loaderContainer.style.display = 'flex';
-        
         currentModelId = modelId;
         const config = models[modelId];
+
+        // Sembunyikan model sementara menjadi titik debu saat file berganti
+        controller.setAttribute('scale', `0.001 0.001 0.001`);
+        
         activeModel.setAttribute('src', config.url);
         
-        scale = config.initScale;
         baseRotX = config.initRotX;
         currentRotX = baseRotX; 
         rotY = 0;
         
-        controller.setAttribute('scale', `${scale} ${scale} ${scale}`);
         controller.setAttribute('rotation', `${currentRotX} 0 0`);
         updateHUD();
 
@@ -152,6 +133,7 @@
         btnElement.classList.add('active');
       };
 
+      // GESTUR PINCH & SWIPE
       document.addEventListener('touchmove', (e) => {
         if(e.target.closest('#model-selector') || e.target.closest('#ask-button')) return;
         e.preventDefault(); 
@@ -169,13 +151,15 @@
           const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
           if (dist) {
             scale *= (d / dist);
-            scale = Math.min(Math.max(scale, 0.1), 50); 
+            // Limit zoom disesuaikan karena skala bawaannya sekarang selalu di angka desimal kecil
+            scale = Math.min(Math.max(scale, 0.01), 10); 
           }
           dist = d;
           controller.setAttribute('scale', `${scale} ${scale} ${scale}`);
         }
       }, { passive: false });
 
+      // DOUBLE TAP RESET
       document.addEventListener('touchend', (e) => { 
         lastX = null; lastY = null; dist = null; 
         
@@ -183,7 +167,8 @@
         const tapLength = currentTime - lastTap;
         
         if (tapLength < 300 && tapLength > 0 && e.touches.length === 0) {
-          scale = models[currentModelId].initScale;
+          // Reset kembali ke skala hitungan Auto-Pilot
+          scale = models[currentModelId].baseScale || 1;
           currentRotX = models[currentModelId].initRotX;
           rotY = 0;
           controller.setAttribute('scale', `${scale} ${scale} ${scale}`);
