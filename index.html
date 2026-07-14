@@ -56,18 +56,18 @@
     </style>
   </head>
   <body>
-    <div id="loader-container"><img id="loader-svg" src="https://raw.githubusercontent.com/mrmandrian/arvi/main/Abstraction.svg" alt="Loading..."></div>
+    <div id="loader-container"><img id="loader-svg" src="./Abstraction.svg" alt="Loading..."></div>
 
     <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false; trackingMethod: best;" renderer="colorManagement: true" vr-mode-ui="enabled: false">
-      <a-marker type="pattern" url="./pattern-qr-code-styling.patt" smooth="true" smoothCount="10" smoothTolerance="0.01" smoothThreshold="5">
+      <a-marker type="pattern" url="./patts/pattern-qr-code-styling.patt" smooth="true" smoothCount="10" smoothTolerance="0.01" smoothThreshold="5">
         <a-entity id="model-controller" rotation="0 0 0" position="0 0 0" scale="1 1 1">
-          <a-gltf-model id="active-model" src="https://raw.githubusercontent.com/mrmandrian/arvi/main/ujang.glb"></a-gltf-model>
+          <a-gltf-model id="active-model" src="./models/ujang.glb"></a-gltf-model>
         </a-entity>
       </a-marker>
       <a-entity camera near="0.001" far="10000"></a-entity>
     </a-scene>
 
-    <img id="top-logo" src="https://raw.githubusercontent.com/mrmandrian/arvi/main/tularasa_fin_Finale%20material.svg" alt="Tularasa Logo">
+    <img id="top-logo" src="./tularasa_fin_Finale material.svg" alt="Tularasa Logo">
     
     <div id="rot-hud">Rot: 0 0 0 | Zoom: 1.0</div>
 
@@ -102,11 +102,11 @@
 
       // KONFIGURASI MODEL
       const models = {
-        1: { url: "https://raw.githubusercontent.com/mrmandrian/arvi/main/ujang.glb", initScale: 2, initRotX: 0, allowRotX: false, allowRotY: true },
-        2: { url: "https://raw.githubusercontent.com/mrmandrian/arvi/main/lowpoly_house.glb", initScale: 0.5, initRotX: 0, allowRotX: false, allowRotY: true },
-        3: { url: "https://raw.githubusercontent.com/mrmandrian/arvi/main/hiking_boots_lowpoly.glb", initScale: 1, initRotX: 0, allowRotX: true, allowRotY: true },
-        4: { url: "https://raw.githubusercontent.com/mrmandrian/arvi/main/motocross_helmet_final.glb", initScale: 0.5, initRotX: 0, allowRotX: true, allowRotY: true },
-        5: { url: "https://raw.githubusercontent.com/mrmandrian/arvi/main/low-poly_truck_car_drifter.glb", initScale: 0.05, initRotX: 0, allowRotX: false, allowRotY: true }
+        1: { url: "./models/ujang.glb", initScale: 2, initRotX: 0, allowRotX: false, allowRotY: true },
+        2: { url: "./models/lowpoly_house.glb", initScale: 0.5, initRotX: 0, allowRotX: false, allowRotY: true },
+        3: { url: "./models/hiking_boots_lowpoly.glb", initScale: 1, initRotX: 0, allowRotX: true, allowRotY: true },
+        4: { url: "./models/motocross_helmet_final.glb", initScale: 0.5, initRotX: 0, allowRotX: true, allowRotY: true },
+        5: { url: "./models/low-poly_truck_car_drifter.glb", initScale: 0.05, initRotX: 0, allowRotX: false, allowRotY: true }
       };
 
       function updateHUD() {
