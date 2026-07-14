@@ -137,7 +137,9 @@
 
       // GESTURE TOUCH SCREEN (MOBILE)
       document.addEventListener('touchstart', (e) => {
-        hasMoved = false; 
+        hasMoved = false;
+        lastX = null;
+        lastY = null;
       }, { passive: true });
 
       document.addEventListener('touchmove', (e) => {
