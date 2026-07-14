@@ -171,7 +171,7 @@
       <!-- FIXED: Rotasi sumbu X disetel ke 90 derajat agar objek tegak lurus mengikuti orientasi dinding/layar monitor -->
       <a-entity id="model-controller" rotation="90 0 0" position="0 0 0" scale="1 1 1">
         <a-gltf-model id="active-model" src="./models/1967_ford_mustang_shelby_cobra_gt500.glb"
-          scale="2 2 2"></a-gltf-model>
+          scale="50 50 50"></a-gltf-model>
       </a-entity>
     </a-marker>
     <a-entity camera near="0.001" far="10000"></a-entity>
@@ -210,6 +210,10 @@
     let lastX, lastY, dist, lastTap = 0;
     let hasMoved = false;
 
+    // FIXED: Rotasi dasar 90 derajat (orientasi dinding) dijadikan base permanen;
+    // rotasi per-model (initRotX) ditambahkan di atasnya, bukan menggantikannya.
+    const BASE_ROT_X = 90;
+
     // KONFIGURASI MODEL
     // FIXED: Nilai initRotX untuk model 1 diubah menjadi 0 agar tidak bertabrakan dengan sumbu rotasi dinding
     const models = {
@@ -221,7 +225,7 @@
     };
 
     function updateHUD() {
-      rotHud.textContent = `Rot: ${Math.round(currentRotX)} ${Math.round(rotY)} 0 | Zoom: ${scale.toFixed(1)}`;
+      rotHud.textContent = `Rot: ${Math.round(BASE_ROT_X + currentRotX)} ${Math.round(rotY)} 0 | Zoom: ${scale.toFixed(1)}`;
     }
 
     // Proteksi ganda penutup loader screen agar tidak tersangkut hitam terus menerus
@@ -247,7 +251,7 @@
       rotY = 0;
 
       controller.setAttribute('scale', '1 1 1');
-      controller.setAttribute('rotation', `${currentRotX} 0 0`);
+      controller.setAttribute('rotation', `${BASE_ROT_X + currentRotX} 0 0`);
       updateHUD();
 
       document.querySelectorAll('.model-btn').forEach(btn => btn.classList.remove('active'));
@@ -273,7 +277,7 @@
         if (config.allowRotX) currentRotX += (e.touches[0].clientY - (lastY || e.touches[0].clientY)) * 0.5;
 
         lastX = e.touches[0].clientX; lastY = e.touches[0].clientY;
-        controller.setAttribute('rotation', `${currentRotX} ${rotY} 0`);
+        controller.setAttribute('rotation', `${BASE_ROT_X + currentRotX} ${rotY} 0`);
         updateHUD();
       } else if (e.touches.length === 2) {
         const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
@@ -296,7 +300,7 @@
         scale = models[currentModelId].initScale;
         currentRotX = models[currentModelId].initRotX; rotY = 0;
         activeModel.setAttribute('scale', `${scale} ${scale} ${scale}`);
-        controller.setAttribute('rotation', `${currentRotX} 0 0`);
+        controller.setAttribute('rotation', `${BASE_ROT_X + currentRotX} 0 0`);
         updateHUD();
       }
       lastTap = currentTime;
@@ -347,7 +351,7 @@
         rotY += (offsetX / knobMaxOffset) * 3;
       }
 
-      controller.setAttribute('rotation', `${currentRotX} ${rotY} 0`);
+      controller.setAttribute('rotation', `${BASE_ROT_X + currentRotX} ${rotY} 0`);
       updateHUD();
     }
 
