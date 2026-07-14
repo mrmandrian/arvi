@@ -165,11 +165,11 @@
 
   <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false; trackingMethod: best;"
     renderer="colorManagement: true" vr-mode-ui="enabled: false">
-    <!-- FIXED: Pemanggilan URL patt lokal relatif dipastikan aman dari restriksi direktori -->
+    
     <a-marker type="pattern" url="./patts/arvi_pattern.patt" smooth="true" smoothCount="10" smoothTolerance="0.01"
       smoothThreshold="5">
-      <a-entity id="model-controller" rotation="0 0 0" position="0 0 0" scale="1 1 1">
-        <!-- FIXED: Skala awal diinjeksi langsung pada inisialisasi tag HTML agar sinkron dengan data array -->
+      <!-- FIXED: Rotasi sumbu X disetel ke 90 derajat agar objek tegak lurus mengikuti orientasi dinding/layar monitor -->
+      <a-entity id="model-controller" rotation="90 0 0" position="0 0 0" scale="1 1 1">
         <a-gltf-model id="active-model" src="./models/1967_ford_mustang_shelby_cobra_gt500.glb"
           scale="2 2 2"></a-gltf-model>
       </a-entity>
@@ -211,8 +211,9 @@
     let hasMoved = false;
 
     // KONFIGURASI MODEL
+    // FIXED: Nilai initRotX untuk model 1 diubah menjadi 0 agar tidak bertabrakan dengan sumbu rotasi dinding
     const models = {
-      1: { url: "./models/1967_ford_mustang_shelby_cobra_gt500.glb", initScale: 50, initRotX: -90, allowRotX: true, allowRotY: true },
+      1: { url: "./models/1967_ford_mustang_shelby_cobra_gt500.glb", initScale: 50, initRotX: 0, allowRotX: true, allowRotY: true },
       2: { url: "./models/lowpoly_house.glb", initScale: 1, initRotX: 0, allowRotX: false, allowRotY: true },
       3: { url: "./models/earth.glb", initScale: 1, initRotX: 90, allowRotX: true, allowRotY: false },
       4: { url: "./models/hiking_boots_lowpoly.glb", initScale: 1, initRotX: 0, allowRotX: true, allowRotY: true },
@@ -223,7 +224,7 @@
       rotHud.textContent = `Rot: ${Math.round(currentRotX)} ${Math.round(rotY)} 0 | Zoom: ${scale.toFixed(1)}`;
     }
 
-    // FIXED: Proteksi ganda penutup loader screen agar tidak tersangkut hitam terus menerus
+    // Proteksi ganda penutup loader screen agar tidak tersangkut hitam terus menerus
     activeModel.addEventListener('model-loaded', () => { loaderContainer.style.display = 'none'; });
     activeModel.addEventListener('model-error', () => { loaderContainer.style.display = 'none'; console.error("Model gagal dimuat!"); });
 
@@ -238,7 +239,6 @@
       const config = models[modelId];
 
       activeModel.setAttribute('src', config.url);
-      // FIXED: Setel atribut skala langsung ke inner model untuk menetralkan distorsi pembungkus entity luar
       activeModel.setAttribute('scale', `${config.initScale} ${config.initScale} ${config.initScale}`);
 
       scale = config.initScale;
