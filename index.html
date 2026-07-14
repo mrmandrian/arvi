@@ -59,9 +59,11 @@
     <div id="loader-container"><img id="loader-svg" src="./Abstraction.svg" alt="Loading..."></div>
 
     <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false; trackingMethod: best;" renderer="colorManagement: true" vr-mode-ui="enabled: false">
+      <!-- FIXED: Pemanggilan URL patt lokal relatif dipastikan aman dari restriksi direktori -->
       <a-marker type="pattern" url="./patts/pattern_update_jul.patt" smooth="true" smoothCount="10" smoothTolerance="0.01" smoothThreshold="5">
         <a-entity id="model-controller" rotation="0 0 0" position="0 0 0" scale="1 1 1">
-          <a-gltf-model id="active-model" src="./models/ujang.glb"></a-gltf-model>
+          <!-- FIXED: Skala awal diinjeksi langsung pada inisialisasi tag HTML agar sinkron dengan data array -->
+          <a-gltf-model id="active-model" src="./models/ujang.glb" scale="2 2 2"></a-gltf-model>
         </a-entity>
       </a-marker>
       <a-entity camera near="0.001" far="10000"></a-entity>
@@ -113,8 +115,14 @@
         rotHud.textContent = `Rot: ${Math.round(currentRotX)} ${Math.round(rotY)} 0 | Zoom: ${scale.toFixed(1)}`;
       }
 
+      // FIXED: Proteksi ganda penutup loader screen agar tidak tersangkut hitam terus menerus
       activeModel.addEventListener('model-loaded', () => { loaderContainer.style.display = 'none'; });
       activeModel.addEventListener('model-error', () => { loaderContainer.style.display = 'none'; console.error("Model gagal dimuat!"); });
+      
+      // Bypass cadangan jika engine AR selesai memuat adegan sebelum model terpanggil sempurna
+      document.querySelector('a-scene').addEventListener('renderstart', () => {
+        setTimeout(() => { loaderContainer.style.display = 'none'; }, 1000);
+      });
 
       window.changeModel = function(modelId, btnElement) {
         loaderContainer.style.display = 'flex';
@@ -122,12 +130,15 @@
         const config = models[modelId];
 
         activeModel.setAttribute('src', config.url);
+        // FIXED: Setel atribut skala langsung ke inner model untuk menetralkan distorsi pembungkus entity luar
+        activeModel.setAttribute('scale', `${config.initScale} ${config.initScale} ${config.initScale}`);
+        
         scale = config.initScale;
         baseRotX = config.initRotX;
         currentRotX = baseRotX; 
         rotY = 0;
         
-        controller.setAttribute('scale', `${scale} ${scale} ${scale}`);
+        controller.setAttribute('scale', '1 1 1');
         controller.setAttribute('rotation', `${currentRotX} 0 0`);
         updateHUD();
 
@@ -163,7 +174,8 @@
             const base = models[currentModelId].initScale;
             scale = Math.min(Math.max(scale, base * 0.1), base * 5); 
           }
-          dist = d; controller.setAttribute('scale', `${scale} ${scale} ${scale}`);
+          dist = d; 
+          activeModel.setAttribute('scale', `${scale} ${scale} ${scale}`);
           updateHUD(); 
         }
       }, { passive: false });
@@ -175,7 +187,7 @@
         if (!hasMoved && currentTime - lastTap < 300 && e.touches.length === 0) {
           scale = models[currentModelId].initScale;
           currentRotX = models[currentModelId].initRotX; rotY = 0;
-          controller.setAttribute('scale', `${scale} ${scale} ${scale}`);
+          activeModel.setAttribute('scale', `${scale} ${scale} ${scale}`);
           controller.setAttribute('rotation', `${currentRotX} 0 0`);
           updateHUD();
         }
@@ -219,7 +231,6 @@
 
         controllerKnob.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
 
-        // UPDATE 3: Joystick mematuhi rules allowRotX dan allowRotY
         const config = models[currentModelId];
         if (config.allowRotX) {
           currentRotX -= (offsetY / knobMaxOffset) * 3; 
@@ -240,11 +251,9 @@
 
       initVirtualController();
 
-      // INIT
+      // INIT DEFAULT VALUES
       scale = models[1].initScale;
       currentRotX = models[1].initRotX;
-      controller.setAttribute('scale', `${scale} ${scale} ${scale}`);
-      controller.setAttribute('rotation', `${currentRotX} 0 0`);
       updateHUD();
     </script>
   </body>
