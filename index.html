@@ -63,7 +63,7 @@
       <a-marker type="pattern" url="./patts/arvi_pattern.patt" smooth="true" smoothCount="10" smoothTolerance="0.01" smoothThreshold="5">
         <a-entity id="model-controller" rotation="0 0 0" position="0 0 0" scale="1 1 1">
           <!-- FIXED: Skala awal diinjeksi langsung pada inisialisasi tag HTML agar sinkron dengan data array -->
-          <a-gltf-model id="active-model" src="./models/ujang.glb" scale="2 2 2"></a-gltf-model>
+          <a-gltf-model id="active-model" src="./models/1967_ford_mustang_shelby_cobra_gt500.glb" scale="2 2 2"></a-gltf-model>
         </a-entity>
       </a-marker>
       <a-entity camera near="0.001" far="10000"></a-entity>
@@ -104,7 +104,7 @@
 
       // KONFIGURASI MODEL
       const models = {
-        1: { url: "./models/ujang.glb", initScale: 2, initRotX: 0, allowRotX: false, allowRotY: true },
+        1: { url: "./models/1967_ford_mustang_shelby_cobra_gt500.glb", initScale: 2, initRotX: 0, allowRotX: false, allowRotY: true },
         2: { url: "./models/lowpoly_house.glb", initScale: 0.5, initRotX: 0, allowRotX: false, allowRotY: true },
         3: { url: "./models/earth.glb", initScale: 3, initRotX: -90, allowRotX: true, allowRotY: true },
         4: { url: "./models/hiking_boots_lowpoly.glb", initScale: 1, initRotX: 0, allowRotX: true, allowRotY: true },
