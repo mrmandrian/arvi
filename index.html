@@ -60,7 +60,7 @@
 
     <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false; trackingMethod: best;" renderer="colorManagement: true" vr-mode-ui="enabled: false">
       <!-- FIXED: Pemanggilan URL patt lokal relatif dipastikan aman dari restriksi direktori -->
-      <a-marker type="pattern" url="./patts/pattern_update_jul.patt" smooth="true" smoothCount="10" smoothTolerance="0.01" smoothThreshold="5">
+      <a-marker type="pattern" url="./patts/arvi_pattern.patt" smooth="true" smoothCount="10" smoothTolerance="0.01" smoothThreshold="5">
         <a-entity id="model-controller" rotation="0 0 0" position="0 0 0" scale="1 1 1">
           <!-- FIXED: Skala awal diinjeksi langsung pada inisialisasi tag HTML agar sinkron dengan data array -->
           <a-gltf-model id="active-model" src="./models/ujang.glb" scale="2 2 2"></a-gltf-model>
