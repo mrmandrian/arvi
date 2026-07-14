@@ -168,8 +168,8 @@
     
     <a-marker type="pattern" url="./patts/arvi_pattern.patt" smooth="true" smoothCount="10" smoothTolerance="0.01"
       smoothThreshold="5">
-      <!-- FIXED: Rotasi sumbu X disetel ke 90 derajat agar objek tegak lurus mengikuti orientasi dinding/layar monitor -->
-      <a-entity id="model-controller" rotation="90 0 0" position="0 0 0" scale="1 1 1">
+      <!-- Wall-mounted marker: marker +Y already aligns with world up, so no base tilt needed; models are Y-up and stand upright at identity -->
+      <a-entity id="model-controller" rotation="0 0 0" position="0 0 0" scale="1 1 1">
         <a-gltf-model id="active-model" src="./models/1967_ford_mustang_shelby_cobra_gt500.glb"
           scale="50 50 50"></a-gltf-model>
       </a-entity>
@@ -210,16 +210,16 @@
     let lastX, lastY, dist, lastTap = 0;
     let hasMoved = false;
 
-    // FIXED: Rotasi dasar 90 derajat (orientasi dinding) dijadikan base permanen;
-    // rotasi per-model (initRotX) ditambahkan di atasnya, bukan menggantikannya.
-    const BASE_ROT_X = 90;
+    // Wall-mounted marker: marker +Y = world up, so the model stands upright with no base tilt.
+    // initRotX is the per-model extra rotation applied on top.
+    const BASE_ROT_X = 0;
 
     // KONFIGURASI MODEL
     // FIXED: Nilai initRotX untuk model 1 diubah menjadi 0 agar tidak bertabrakan dengan sumbu rotasi dinding
     const models = {
       1: { url: "./models/1967_ford_mustang_shelby_cobra_gt500.glb", initScale: 50, initRotX: 0, allowRotX: true, allowRotY: true },
       2: { url: "./models/lowpoly_house.glb", initScale: 1, initRotX: 0, allowRotX: false, allowRotY: true },
-      3: { url: "./models/earth.glb", initScale: 1, initRotX: 90, allowRotX: true, allowRotY: false },
+      3: { url: "./models/earth.glb", initScale: 1, initRotX: 180, allowRotX: false, allowRotY: true },
       4: { url: "./models/hiking_boots_lowpoly.glb", initScale: 1, initRotX: 0, allowRotX: true, allowRotY: true },
       5: { url: "./models/motocross_helmet_final.glb", initScale: 1, initRotX: 0, allowRotX: true, allowRotY: true }
     };
